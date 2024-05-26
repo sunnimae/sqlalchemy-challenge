@@ -45,13 +45,13 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return (
-        f"Available Routes:<br/>"
-        f"/api/v1.0/start date</br>"
-        f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/station<br/>"
-        f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/start date/end date<br/>"
-        f"Date Format: YYYY-MM-DD"
+        "Available Routes:<br/>"
+        "/api/v1.0/precipitation<br/>"
+        "/api/v1.0/station<br/>"
+        "/api/v1.0/tobs<br/>"
+        "/api/v1.0/tstats/&lt;start date&gt;</br>"
+        "/api/v1.0/tstats/&lt;start date&gt;/&lt;end date&gt;<br/>"
+        "Date Format: YYYY-MM-DD"
         )
     
 
@@ -102,39 +102,20 @@ def hawaii_tobs():
         station_tobs.append(tobs_dict)
     return jsonify(station_tobs)
 
-@app.route("/api/v1.0/<start>", methods=["GET"])
-def get_temperatures_start(start):
+@app.route("/api/v1.0/tstats/<start>")
+@app.route("/api/v1.0/tstats/<start>/<end>")
+def get_tstats(start, end=dt.date(dt.MAXYEAR, 12, 31)):
 
-    results = session.query(func.min(measurement.tobs), func.max(measurement.tobs), func.avg(measurement.tobs)).\
-        filter(measurement.date >= start).all()
-
-    temperatures = []
-    for minimum, maximum, average in results:
-        temp_dict = {}
-        temp_dict["minimum"]= minimum
-        temp_dict["maximum"]= maximum
-        temp_dict["average"]= average
-        temperatures.append(temp_dict)
-    return jsonify(temperatures)
-
-
-@app.route("/api/v1.0/<start>/<end>", methods=["GET"])
-def get_tobs(start, end):
-   
-    results = session.query(func.min(measurement.tobs), func.max(measurement.tobs), func.avg(measurement.tobs)).\
+    minimum, maximum, average = session.query(func.min(measurement.tobs), func.max(measurement.tobs), func.avg(measurement.tobs)).\
         filter(measurement.date >= start).\
-        filter(measurement.date <= end).all()
+        filter(measurement.date <= end).first()
 
-    temp_stats = []
-    for minimum, maximum, average in results:
-        temp_dict = {}
-        temp_dict["minimum"] = minimum
-        temp_dict["maximum"] = maximum
-        temp_dict["average"] = average
-        temp_stats.append(temp_dict)
-    return jsonify(temp_stats)
-
-session.close()
+    temp_list = {
+        "TMIN": minimum,
+        "TMAX": maximum,
+        "TAVG": average,
+    }    
+    return jsonify(temp_list)
 
 if __name__ == '__main__':
     app.run(debug=True)
